@@ -34,6 +34,7 @@ end
 
 function new(func, delay)
 	typeValidate(func, "function", 1, "func")
+	typeValidate(delay, "number", 2, "delay")
 
 	if delay > 0 then
 		local timer = os.startTimer(delay)
