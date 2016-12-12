@@ -3,6 +3,8 @@
 # ID 1 = a device
 /*
 !.gitignore
+!README.md
+!statuses.md
 !/0
 !/1
 
