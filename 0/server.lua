@@ -31,6 +31,9 @@ local STATUSES = {
 	purge = 4
 }
 
+-- Config
+local config = {}
+
 -- Variables
 local state = {
 	status = STATUSES.normal
@@ -99,6 +102,11 @@ local DeviceApi = {
 		return state
 	end,
 	
+	-- Get server configuration
+	getConfig = function ()
+		return config
+	end,
+	
 	-- Get the table of devices.
 	getDevices = function ()
 		return devices
@@ -129,6 +137,11 @@ local ControllerApi = {
 	-- Get current base state
 	getState = function ()
 		return state
+	end,
+	
+	-- Get server configuration
+	getConfig = function ()
+		return config
 	end,
 	
 	-- Get the table of devices. Optionally can provide type and sector filters.
@@ -360,7 +373,7 @@ local function loadConfig()
 	local configFilePath = "config/config.json"
 	
 	-- Read config file.
-	local config = json.decode(getFileText(configFilePath))
+	config = json.decode(getFileText(configFilePath))
 	
 	-- Apply
 	CHANNEL = config.channel
