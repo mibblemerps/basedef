@@ -68,11 +68,9 @@ local loadedDeviceScripts = {}
 local controller = nil
 
 -- Load APIs
-os.unloadAPI("lib/base64")
-os.loadAPI("lib/base64")
-
-os.unloadAPI("lib/callback")
-os.loadAPI("lib/callback")
+if not base64 then os.loadAPI("lib/base64") end
+if not callback then os.loadAPI("lib/callback") end
+if not json then os.loadAPI("lib/json") end
 
 
 --[[
