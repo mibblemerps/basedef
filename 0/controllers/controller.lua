@@ -16,6 +16,32 @@ local purgeSectorTimers = {}
 local alarmTimers = {}
 
 local detectors = {}
+local doors = {}
+
+
+--[[
+	Work out which doors to which sectors should be closed to fullfil isolation requirements.
+]]
+local function calculateDoorIsolation()
+	local lockDoors = {}
+	
+	-- Find all doors that need to be locked.
+	for _,sector in ipairs(sectors) do
+		if sector.isolated then
+			for _,door in ipairs(sector.doors) do lockDoors[#lockDoors + 1] = door end
+		end
+	end
+	
+	-- Open all doors
+	for _,door in ipairs(doors) do
+		door.activate(true)
+	end
+	
+	-- Lock all doors that should be locked down.
+	for _,door in ipairs(lockDoors) do
+		door.activate(false)
+	end
+end
 
 
 --[[
@@ -27,11 +53,13 @@ function Sector.new(id)
 	local self = setmetatable({}, Sector)
 	
 	self.id = id
+	self.isolated = false
 	
 	-- Get devices
 	self.detectors = api.getDevices("detector", self.id)
 	self.teslas = api.getDevices("tesla", self.id)
 	self.alarms = api.getDevices("alarm", self.id)
+	self.doors = api.getDevices("door", self.id)
 	
 	return self
 end
@@ -68,6 +96,21 @@ function Sector:setAlarm(alarmTime)
 	end
 end
 
+-- Isolate sector.
+function Sector:isolate(isolateTime)
+	-- Isolate sector and request recalculation of doors.
+	self.isolated = true
+	calculateDoorIsolation()
+	
+	-- Queue unisolate, if requested.
+	if isolateTime ~= nil then
+		callback.new(function ()
+			self.isolated = false
+			calculateDoorIsolation()
+		end, isolateTime)
+	end
+end
+
 ---
 
 
@@ -82,6 +125,7 @@ end
 api.onReady(function ()
 
 	detectors = api.getDevices("detector")
+	doors = api.getDevices("door")
 
 	-- Bind to detector events
 	for _,detector in ipairs(detectors) do
@@ -93,8 +137,11 @@ api.onReady(function ()
 				if (state.status == api.STATUSES.normal) and (detector.config.detectType == "mob") then
 					print("Mob detected in sector " .. sectorId .. "!")
 				
+					-- Sound alarm.
 					getSector(sectorId):setAlarm(4)
-					-- TODO: isolate sector
+					
+					-- Isolate sector
+					getSector(sectorId):isolate(4)
 					
 					-- Purge sector after 10 seconds.
 					getSector(sectorId):delayPurge(2, 2) -- TODO: change this back to 10 seconds
@@ -103,6 +150,8 @@ api.onReady(function ()
 			end
 		end
 	end
+	
+	calculateDoorIsolation()
 	
 end)
 

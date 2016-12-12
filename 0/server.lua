@@ -42,6 +42,7 @@ local deviceTypeMappings = {
 	[1] = "detector",
 	[2] = "tesla",
 	[4] = "alarm",
+	[5] = "door",
 }
 
 -- Maps RedNet IDs to device configs.
@@ -55,7 +56,10 @@ local deviceConfigMappings = {
 	},
 	[4] = { -- Alarm
 		sector = 1
-	}
+	},
+	[5] = { -- Door
+		sector = {1, 2}
+	},
 }
 
 local loadedDeviceScripts = {}
@@ -136,7 +140,13 @@ local ControllerApi = {
 		local found = {}
 		for _,device in ipairs(devices) do
 			if device.deviceType == name then
-				if (sector == nil) or (sector == device.config.sector) then
+				local validSectors = {}
+				if type(device.config.sector) == "table" then
+					validSectors = device.config.sector
+				else
+					validSectors = {device.config.sector}
+				end
+				if (sector == nil) or table.contains(validSectors, sector) then
 					found[#found + 1] = device
 				end
 			end
