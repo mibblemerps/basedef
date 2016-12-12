@@ -8,6 +8,7 @@
 local api = ...
 
 local state = api.getState()
+local config = api.getConfig()
 
 local sectors = {}
 
@@ -136,15 +137,17 @@ api.onReady(function ()
 				
 				if (state.status == api.STATUSES.normal) and (detector.config.detectType == "mob") then
 					print("Mob detected in sector " .. sectorId .. "!")
+					
+					local totalTime = config.normal_purge_countdown + config.normal_purge_time
 				
 					-- Sound alarm.
-					getSector(sectorId):setAlarm(4)
+					getSector(sectorId):setAlarm(totalTime)
 					
 					-- Isolate sector
-					getSector(sectorId):isolate(4)
+					getSector(sectorId):isolate(totalTime)
 					
-					-- Purge sector after 10 seconds.
-					getSector(sectorId):delayPurge(2, 2) -- TODO: change this back to 10 seconds
+					-- Purge sector
+					getSector(sectorId):delayPurge(config.normal_purge_countdown, config.normal_purge_time)
 				end
 				
 			end
