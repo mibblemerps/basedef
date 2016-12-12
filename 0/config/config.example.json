@@ -1,5 +1,10 @@
 {
 	"channel": "basedefend",
 	"networkName": "thelab",
-	"defaultStatus": 1
+	"defaultStatus": 1,
+	
+	"normal_purge_countdown": 10,
+	"normal_purge_time": 8,
+	
+	"purge_revert_time": 16
 }
