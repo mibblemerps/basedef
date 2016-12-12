@@ -1,0 +1,10 @@
+# Ignore every except computer ID 0 and 1.
+# ID 0 = server
+# ID 1 = a device
+/*
+!.gitignore
+!/0
+!/1
+
+# Ignore the trace program.
+/*trace
