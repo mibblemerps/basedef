@@ -1,0 +1,103 @@
+local args = {...}
+local switches = {}
+local _fsopen = fs.open
+
+local UNIQUECHUNKNAME = "trace/root"
+
+local function printHelp()
+	local pname = shell.getRunningProgram()
+	print("Usage: " .. (pname:match("/(.-)$") or pname) .. " [switches...] <program> [args...]")
+	print("Switches:")
+	print("  -h         show this message")
+	print("  -l<FILE>   log trace to <FILE> (append mode)")
+	print("  -f         show full trace (including bios.lua)")
+	print("  -m<MAX>    set max trace depth to <MAX>")
+	print("                (there's no maximum by default)")
+	print("  -b         break trace into separate lines")
+end
+
+local logfile
+function switches.l(rest)
+	logfile = rest
+end
+
+function switches.h()
+	printHelp()
+	return true -- exit
+end
+
+local maxdepth
+function switches.m(rest)
+	maxdepth = tonumber(rest)
+	if not maxdepth or maxdepth < 1 then
+		print("Invalid max depth: " .. rest)
+	end
+end
+
+local breakintolines
+function switches.b()
+	breakintolines = true
+end
+
+local fulltrace
+function switches.f()
+	fulltrace = true
+end
+
+while args[1] do
+	if not args[1]:match("^%-") then break end
+	local switchf = args[1]:sub(2, 2)
+	if switches[switchf] then
+		if switches[switchf](args[1]:sub(3)) then return end
+	else
+		print("Unknown switch: " .. switchf)
+	end
+	table.remove(args, 1)
+end
+
+if not args[1] then
+	printHelp()
+	return
+end
+
+local ffunc = loadfile(args[1], setmetatable({shell = shell}, {__index = _G}))
+if not ffunc then
+	print("Failed to load program")
+	return
+end
+
+load([[xpcall(func, handler)]], UNIQUECHUNKNAME, "t", {
+	xpcall = xpcall,
+	func = function()
+		ffunc(table.unpack(args, 2))
+	end,
+	handler = function(xpcallerr)
+		local loghandle
+		if logfile then
+			loghandle = _fsopen(logfile, "a")
+		end
+		
+		local tracerestbl = {xpcallerr .. "\n  stack trace:"}
+		local level = 1
+		while true do
+			local nope, errstr = pcall(error, "@", level + 2)
+			if errstr == "@" then break end
+			if not fulltrace and errstr:match("^(.-):") == UNIQUECHUNKNAME then
+				tracerestbl[#tracerestbl] = nil
+				tracerestbl[#tracerestbl] = nil -- yup, twice
+				break
+			end
+			tracerestbl[#tracerestbl + 1] = errstr:match("^(.+): @$")
+			if level == maxdepth then break end
+			level = level + 1
+		end
+		
+		local traceres = table.concat(tracerestbl, breakintolines and "\n    " or " ")
+		
+		printError(traceres)
+		if loghandle then
+			loghandle.writeLine(traceres)
+			loghandle.close()
+		end
+	end
+})()

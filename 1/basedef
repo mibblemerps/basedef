@@ -1,0 +1,78 @@
+--[[
+	Base Defend System.
+	Device Library.
+	
+	By Mitchfizz05. Licensed under the terms of the MIT license (http://opensource.org/licenses/MIT).
+]]
+
+-- Load APIs
+os.unloadAPI("lib/base64")
+os.loadAPI("lib/base64")
+
+--[[
+	Device class.
+]]
+Device = {}
+Device.__index = Device
+
+function Device.new(channel, networkName, deviceType, allowRemoteExecute)
+	local self = setmetatable({}, Device)
+	self.channel = channel
+	self.networkName = networkName
+	self.deviceType = deviceType
+	self.allowRemoteExecute = allowRemoteExecute
+	if self.allowRemoteExecute == nil then self.allowRemoteExecute = true end
+	self.remoteExecuteCallback = function (func, callback)
+		callback(func())
+	end
+	
+	self.currentServer = nil
+	
+	return self
+end
+
+function Device:runRednet(rednetTimeout)
+	local id, data = rednet.receive(self.channel, rednetTimeout)
+	
+	if type(data) == "table" then
+		-- Valid message!
+		if data.intent == "discover" then
+			if data.network_name == self.networkName then
+				-- Respond to discover request. Announce ourselves!
+				rednet.send(id, textutils.serialise({
+					intent = "connect",
+					type = self.deviceType,
+					remoteExecute = self.allowRemoteExecute,
+				}))
+				self.currentServer = id
+			end
+			
+		else
+			if id == self.currentServer then
+				-- Message from server.
+				
+				if data.intent == "remote_execute" and self.allowRemoteExecute then
+					-- Remote execute request.
+					local codeChunk = base64.decodeStr(data.code)
+					
+					local func = loadstring(codeChunk)
+					self.remoteExecuteCallback(func, data.args, function (success, result)
+						-- Send response to server.
+						rednet.send(id, {
+							intent = "remote_execute_response",
+							success = success,
+							result = result
+						}, self.channel)
+						
+						if not success then
+							-- Failure.
+							print("Error occured running remote execute code!")
+							print("  " .. result)
+						end
+					end)
+				end
+				
+			end
+		end
+	end
+end

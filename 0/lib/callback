@@ -1,0 +1,77 @@
+--[[
+	Lua delayed callback library.
+	
+	Copyright (c) 2016 Mitchell Nelson <me@mitchfizz05.net>
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	THE SOFTWARE.
+]]
+
+local callbacks = {}
+
+local function typeValidate(value, expectedType, argumentNumber, argumentName)
+	if type(value) ~= expectedType then
+		local a = tostring(argumentNumber)
+		if argumentName ~= nil then a = a .. " (" .. argumentName .. ")" end
+		error("Argument " .. a .. " expected " .. expectedType .. ", got " .. type(value))
+	end
+end
+
+function new(func, delay)
+	typeValidate(func, "function", 1, "func")
+
+	if delay > 0 then
+		local timer = os.startTimer(delay)
+		callbacks[timer] = func
+		sleep(0)
+		return timer
+	else
+		func()
+	end
+end
+
+--[[
+	Should be called every os.pullEvent.
+	Allows library to check if any callbacks need to be executed.
+]]
+function pullEvent(e)
+	if e[1] == "timer" then
+		local toRemove = {}
+		-- Check if any of the callback timers match.
+		for timer, func in pairs(callbacks) do
+			if timer == e[2] then
+				-- Run callback, then queue for removal from callbacks.
+				func()
+				toRemove[#toRemove + 1] = timer
+			end
+		end
+		
+		-- Remove any callbacks queued for removal.
+		for _, timer in ipairs(toRemove) do
+			callbacks[timer] = nil
+		end
+		
+		--[[
+			If there are no callbacks left, raise an event.
+			This is so if the program wants to, it can exit once all callbacks are finished.
+			This probably won't be used often.
+		]]
+		os.queueEvent("no_callbacks_left")
+	end
+end
+
