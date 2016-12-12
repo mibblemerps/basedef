@@ -303,27 +303,27 @@ local function scanDevices()
 					end
 					if deviceType == nil then
 						-- Still no device type. We have a problem.
-						error("Cannot determine device type for " .. id .. "!")
+						print("Cannot determine device type for " .. id .. ".")
+					else
+						if not fs.exists("devices/" .. deviceType .. ".lua") then
+							error("Device type \"" .. deviceType .. "\" (for " .. id .. ") has no device script!")
+						end
+						
+						local newDevice = Device.new(
+							id,
+							deviceType,
+							deviceConfigMappings[id]
+						)
+						
+						if meta.remoteExecute then
+							-- Remote execute available.
+							newDevice.remoteExecuteSupported = true
+						end
+						
+						devices[#devices + 1] = newDevice
+						
+						print("New device connected (" .. id .. ") of type " .. deviceType .. "!")
 					end
-					
-					if not fs.exists("devices/" .. deviceType .. ".lua") then
-						error("Device type \"" .. deviceType .. "\" (for " .. id .. ") has no device script!")
-					end
-					
-					local newDevice = Device.new(
-						id,
-						deviceType,
-						deviceConfigMappings[id]
-					)
-					
-					if meta.remoteExecute then
-						-- Remote execute available.
-						newDevice.remoteExecuteSupported = true
-					end
-					
-					devices[#devices + 1] = newDevice
-					
-					print("New device connected (" .. id .. ") of type " .. deviceType .. "!")
 				end
 			end
 		end
