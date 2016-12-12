@@ -262,6 +262,14 @@ local function openRednet()
 	return opened
 end
 
+-- Get full content of a file.
+local function getFileText(path)
+	local f = fs.open(path, "r")
+	local content = f:readAll()
+	f:close()
+	return content
+end
+
 local coroutineFilters = {}
 local function runCoroutine(co, e)
 	if (coroutineFilters[co] == nil) or (coroutineFilters[co] == e[1]) then
@@ -340,15 +348,34 @@ local function scanDevices()
 	print("Total of " .. #devices .. " device connected.")
 end
 
+local function initConfig()
+	if not fs.exists("config/config.json") then
+		-- First run.
+		print("Generating config file...")
+		fs.copy("config/config.example.json", "config/config.json")
+	end
+end
+
+local function loadConfig()
+	local configFilePath = "config/config.json"
+	
+	-- Read config file.
+	local config = json.decode(getFileText(configFilePath))
+	
+	-- Apply
+	CHANNEL = config.channel
+	NETWORK_NAME = config.networkName
+	state.status = config.defaultStatus
+end
 
 -- Clear terminal
 term.clear()
 term.setCursorPos(1,1)
 
 -- Init
-if not openRednet() then
-	print("Warning! No RedNet modems attached! Communication unavailable.")
-end
+initConfig()
+loadConfig()
+if not openRednet() then print("Warning! No RedNet modems attached! Communication unavailable.") end
 
 -- Scan for devices
 print("Waiting for devices to start...")
