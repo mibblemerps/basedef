@@ -16,8 +16,11 @@ local sectors = {}
 local purgeSectorTimers = {}
 local alarmTimers = {}
 
+local devices = {}
 local detectors = {}
+local teslas = {}
 local doors = {}
+local alarms = {}
 
 --[[
 	Work out which doors to which sectors should be closed to fullfil isolation requirements.
@@ -116,9 +119,32 @@ end
 --[[
 	Set a new base status.
 ]]
+local lastStatus = nil
+local purgeRevertCallback
 function setStatus(newStatus)
+	lastStatus = state.status
 	state.status = newStatus
+	print("Status change: " .. lastStatus .. " -> " .. newStatus)
 	
+	if lastStatus == api.STATUSES.purge then
+		-- Revert purge.
+		for _,alarm in ipairs(alarms) do alarm.activate(false) end -- disable alarms
+		for _,tesla in ipairs(doors) do tesla.activate(false) end -- disable teslas
+		calculateDoorIsolation() -- revert doors
+		callback.cancel(purgeRevertCallback)
+	end
+	
+	if newStatus == api.STATUSES.purge then
+		-- Purge status :O
+		for _,alarm in ipairs(alarms) do alarm.activate(true) end -- enable alarms
+		for _,door in ipairs(doors) do door.activate(false) end -- close doors
+		for _,tesla in ipairs(doors) do tesla.activate(true) end -- enable teslas
+		
+		-- Revert after purge revert time.
+		purgeRevertCallback = callback.new(function ()
+			setStatus(api.STATUSES.high_alert)
+		end, config.purge_revert_time)
+	end
 end
 
 
@@ -132,8 +158,19 @@ end
 
 api.onReady(function ()
 
+	devices = api.getDevices()
 	detectors = api.getDevices("detector")
+	teslas = api.getDevices("tesla")
 	doors = api.getDevices("door")
+	alarms = api.getDevices("alarm")
+	
+	-- Init sectors
+	for _,device in ipairs(devices) do
+		local ids = device.config.sector
+		if type(ids) == "number" then ids = {ids} end
+		
+		for _,sectorId in ipairs(ids) do getSector(sectorId) end
+	end
 
 	-- Bind to detector events
 	for _,detector in ipairs(detectors) do
