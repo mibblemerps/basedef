@@ -120,6 +120,7 @@ end
 	Set a new base status.
 ]]
 local lastStatus = nil
+local purgeTimedOut = false
 local purgeRevertCallback
 function setStatus(newStatus)
 	lastStatus = state.status
@@ -131,7 +132,11 @@ function setStatus(newStatus)
 		for _,alarm in ipairs(alarms) do alarm.activate(false) end -- disable alarms
 		for _,tesla in ipairs(doors) do tesla.activate(false) end -- disable teslas
 		calculateDoorIsolation() -- revert doors
-		callback.cancel(purgeRevertCallback)
+		
+		-- Cancel pending callback to revert to high alert. We only do this if the callback wasn't the thing to trigger the end of the purge.
+		if not purgeTimedOut then
+			callback.cancel(purgeRevertCallback)
+		end
 	end
 	
 	if newStatus == api.STATUSES.purge then
@@ -141,7 +146,9 @@ function setStatus(newStatus)
 		for _,tesla in ipairs(doors) do tesla.activate(true) end -- enable teslas
 		
 		-- Revert after purge revert time.
+		purgeTimedOut = false
 		purgeRevertCallback = callback.new(function ()
+			purgeTimedOut = true
 			setStatus(api.STATUSES.high_alert)
 		end, config.purge_revert_time)
 	end
