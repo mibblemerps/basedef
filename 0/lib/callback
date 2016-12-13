@@ -46,6 +46,11 @@ function new(func, delay)
 	end
 end
 
+function cancel(timerId)
+	os.cancelTimer(timerId)
+	callbacks[timerId] = nil
+end
+
 --[[
 	Should be called every os.pullEvent.
 	Allows library to check if any callbacks need to be executed.
