@@ -130,7 +130,7 @@ function setStatus(newStatus)
 	if lastStatus == api.STATUSES.purge then
 		-- Revert purge.
 		for _,alarm in ipairs(alarms) do alarm.activate(false) end -- disable alarms
-		for _,tesla in ipairs(doors) do tesla.activate(false) end -- disable teslas
+		for _,tesla in ipairs(teslas) do tesla.activate(false) end -- disable teslas
 		calculateDoorIsolation() -- revert doors
 		
 		-- Cancel pending callback to revert to high alert. We only do this if the callback wasn't the thing to trigger the end of the purge.
@@ -143,7 +143,7 @@ function setStatus(newStatus)
 		-- Purge status :O
 		for _,alarm in ipairs(alarms) do alarm.activate(true) end -- enable alarms
 		for _,door in ipairs(doors) do door.activate(false) end -- close doors
-		for _,tesla in ipairs(doors) do tesla.activate(true) end -- enable teslas
+		for _,tesla in ipairs(teslas) do tesla.activate(true) end -- enable teslas
 		
 		-- Revert after purge revert time.
 		purgeTimedOut = false
