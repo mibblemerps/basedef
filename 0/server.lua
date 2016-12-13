@@ -112,6 +112,10 @@ local DeviceApi = {
 		return config
 	end,
 	
+	getController = function ()
+		return controller
+	end,
+	
 	-- Get the table of devices.
 	getDevices = function ()
 		return devices
@@ -288,6 +292,36 @@ local function getFileText(path)
 	return content
 end
 
+-- Similar to os.loadAPI, except it returns to loaded API rather than putting it into the global scope.
+local function returnApi( _sPath, args )
+	local sName = fs.getName( _sPath )
+
+	local tEnv = {}
+	setmetatable( tEnv, { __index = _G } )
+	local fnAPI, err = loadfile( _sPath, tEnv )
+	if fnAPI then
+		local ok, err = pcall( function ()
+			return fnAPI(args)
+		end )
+		if not ok then
+			printError( err )
+			return false
+		end
+	else
+		printError( err )
+		return false
+	end
+
+	local tAPI = {}
+	for k,v in pairs( tEnv ) do
+		if k ~= "_ENV" then
+			tAPI[k] =  v
+		end
+	end
+
+	return tAPI
+end
+
 local coroutineFilters = {}
 local function runCoroutine(co, e)
 	if (coroutineFilters[co] == nil) or (coroutineFilters[co] == e[1]) then
@@ -400,16 +434,14 @@ print("Waiting for devices to start...")
 sleep(0.1) -- wait for devices to come online
 scanDevices()
 
-
 -- Ready - let devices perform initialisation.
 print("Devices initialising...")
 for _,callback in ipairs(onReadyCallbacks) do callback() end
 print("Devices initalised.")
 
-
 -- Initialise controller
 print("Initialising controller...")
-controller = assert(loadfile("controllers/controller.lua"))(ControllerApi)
+controller = returnApi("controllers/controller.lua", ControllerApi)
 for _,callback in ipairs(onControllerReadyCallbacks) do callback() end
 
 

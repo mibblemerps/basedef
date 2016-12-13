@@ -19,7 +19,6 @@ local alarmTimers = {}
 local detectors = {}
 local doors = {}
 
-
 --[[
 	Work out which doors to which sectors should be closed to fullfil isolation requirements.
 ]]
@@ -114,6 +113,14 @@ end
 
 ---
 
+--[[
+	Set a new base status.
+]]
+function setStatus(newStatus)
+	state.status = newStatus
+	
+end
+
 
 local function getSector(id)
 	if sectors[id] == nil then
@@ -160,6 +167,6 @@ end)
 
 api.onRun(function ()
 	while true do
-		local e = {os.pullEvent()}
+		os.pullEvent()
 	end
 end)

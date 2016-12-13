@@ -123,10 +123,10 @@ api.onRun(function ()
 		
 		if action == "purge" then
 			lastStatus = state.status
-			state.status = 4
+			api.getController().setStatus(4)
 		elseif action == "emergency" then
 			lastStatus = state.status
-			state.status = 3
+			api.getController().setStatus(3)
 		end
 	end
 end)
