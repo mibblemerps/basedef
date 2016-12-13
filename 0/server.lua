@@ -46,6 +46,7 @@ local deviceTypeMappings = {
 	[2] = "tesla",
 	[4] = "alarm",
 	[5] = "door",
+	[6] = "button",
 }
 
 -- Maps RedNet IDs to device configs.
@@ -63,6 +64,10 @@ local deviceConfigMappings = {
 	[5] = { -- Door
 		sector = {1, 2}
 	},
+	[6] = { -- Button
+		sector = 1,
+		buttons = {"emergency", "purge"}
+	}
 }
 
 local loadedDeviceScripts = {}
@@ -424,7 +429,6 @@ for _,callback in ipairs(onRunCallbacks) do
 	
 	deviceCoroutines[newCoroutine] = callback
 end
-
 
 -- Main execution loop.
 print("System running.")
